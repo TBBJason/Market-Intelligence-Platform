@@ -17,3 +17,6 @@ dbt/.user.yml
 .DS_Store
 .idea/
 .vscode/
+
+.kiro/
+semantic-review/
