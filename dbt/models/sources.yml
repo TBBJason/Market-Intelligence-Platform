@@ -1,0 +1,84 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Reviewed source registry and immutable retrieval evidence written by ingestion.
+    schema: raw
+    tables:
+      - name: source_registry
+        description: Allowlisted external sources and their review/retrieval state.
+        loaded_at_field: last_checked_at
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 7, period: day}
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+          - name: review_status
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [pending, approved, rejected, review_required]
+      - name: source_documents
+        description: Content-addressed source responses with citation metadata.
+        loaded_at_field: retrieved_at
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 7, period: day}
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+          - name: source_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'source_registry')
+                    field: id
+          - name: content_hash
+            data_tests: [not_null]
+
+  - name: core
+    description: Normalized, versioned entities and typed evidence.
+    schema: core
+    tables:
+      - name: companies
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+          - name: slug
+            data_tests: [unique, not_null]
+      - name: company_profiles
+        loaded_at_field: valid_from
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 7, period: day}
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+          - name: company_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('core', 'companies')
+                    field: id
+          - name: source_document_id
+            data_tests:
+              - unique
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('raw', 'source_documents')
+                    field: id
+      - name: fact_records
+        columns:
+          - name: id
+            data_tests: [unique, not_null]
+          - name: evidence_type
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [direct_fact, derived_classification, model_interpretation]

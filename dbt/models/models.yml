@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: stg_companies
+    description: Thin, renamed view over stable normalized company identities.
+    columns:
+      - name: company_id
+        data_tests: [unique, not_null]
+      - name: slug
+        data_tests: [unique, not_null]
+  - name: stg_company_profiles
+    description: Versioned company profiles joined to their immutable citation metadata.
+    columns:
+      - name: company_profile_id
+        data_tests: [unique, not_null]
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_companies')
+                field: company_id
+      - name: source_document_id
+        data_tests: [unique, not_null]
+      - name: source_url
+        data_tests: [not_null]
+      - name: retrieved_at
+        data_tests: [not_null]
+  - name: stg_fact_records
+    description: Typed facts without interpretation or evidence-type coercion.
+    columns:
+      - name: fact_id
+        data_tests: [unique, not_null]
+      - name: evidence_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [direct_fact, derived_classification, model_interpretation]
+      - name: company_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_companies')
+                field: company_id
+  - name: int_company_profiles_ranked
+    description: Deterministic recency rank across source-backed profile versions.
+    columns:
+      - name: company_profile_id
+        data_tests: [unique, not_null]
+      - name: profile_recency_rank
+        data_tests: [not_null]
+  - name: company_research_profiles
+    description: One current, citation-bearing profile per company for research consumers.
+    columns:
+      - name: company_id
+        data_tests: [unique, not_null]
+      - name: slug
+        data_tests: [unique, not_null]
+      - name: source_document_id
+        data_tests: [unique, not_null]
+      - name: source_url
+        data_tests: [not_null]
+      - name: retrieved_at
+        data_tests: [not_null]
+      - name: evidence_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [direct_fact]
